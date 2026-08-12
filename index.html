@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>棋艺对弈 / Gomoku & Go</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Swiss Grid Header -->
+        <header class="header">
+            <div class="header-grid">
+                <div class="header-brand">
+                    <div class="brand-mark">
+                        <span class="brand-char">棋</span>
+                    </div>
+                    <div class="brand-text">
+                        <h1 class="brand-title">棋艺对弈</h1>
+                        <p class="brand-sub">五子棋 · 围棋</p>
+                    </div>
+                </div>
+                <nav class="header-nav">
+                    <button class="nav-btn active" data-game="gomoku">
+                        <span class="nav-label">01</span>
+                        <span class="nav-name">五子棋</span>
+                    </button>
+                    <button class="nav-btn" data-game="go">
+                        <span class="nav-label">02</span>
+                        <span class="nav-name">围棋</span>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Scoreboard Section -->
+        <section class="scoreboard">
+            <div class="section-label">
+                <span class="label-num">A</span>
+                <span class="label-text">战绩统计</span>
+            </div>
+            <div class="scoreboard-grid">
+                <!-- Gomoku Score -->
+                <div class="score-card" id="gomokuScoreCard">
+                    <div class="score-card-header">
+                        <span class="score-game-name">五子棋</span>
+                        <span class="score-game-en">GOMOKU</span>
+                    </div>
+                    <div class="score-metrics">
+                        <div class="metric">
+                            <span class="metric-value" id="gomokuWins">0</span>
+                            <span class="metric-label">胜</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value" id="gomokuLosses">0</span>
+                            <span class="metric-label">负</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value" id="gomokuDraws">0</span>
+                            <span class="metric-label">平</span>
+                        </div>
+                    </div>
+                    <div class="score-rate-bar">
+                        <div class="rate-fill" id="gomokuRateFill"></div>
+                        <span class="rate-text" id="gomokuRate">0%</span>
+                    </div>
+                </div>
+                <!-- Go Score -->
+                <div class="score-card" id="goScoreCard">
+                    <div class="score-card-header">
+                        <span class="score-game-name">围棋</span>
+                        <span class="score-game-en">WEIQI</span>
+                    </div>
+                    <div class="score-metrics">
+                        <div class="metric">
+                            <span class="metric-value" id="goWins">0</span>
+                            <span class="metric-label">胜</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value" id="goLosses">0</span>
+                            <span class="metric-label">负</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value" id="goDraws">0</span>
+                            <span class="metric-label">平</span>
+                        </div>
+                    </div>
+                    <div class="score-rate-bar">
+                        <div class="rate-fill" id="goRateFill"></div>
+                        <span class="rate-text" id="goRate">0%</span>
+                    </div>
+                </div>
+                <!-- Reset -->
+                <div class="score-reset">
+                    <button class="reset-btn" id="resetScoreBtn">
+                        <span class="reset-icon">↺</span>
+                        <span class="reset-text">重置</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gomoku Section -->
+        <section class="game-section" id="gomokuSection">
+            <div class="section-label">
+                <span class="label-num">B</span>
+                <span class="label-text">五子棋</span>
+            </div>
+            <div class="game-layout">
+                <div class="board-container">
+                    <div class="board-frame">
+                        <div class="board-status" id="gomokuStatus">
+                            <span class="status-dot"></span>
+                            <span class="status-text" id="gomokuStatusText">你的回合</span>
+                        </div>
+                        <canvas id="gomokuCanvas" width="560" height="560"></canvas>
+                    </div>
+                </div>
+                <div class="controls-panel">
+                    <div class="control-group">
+                        <div class="control-label">难度</div>
+                        <div class="seg-control">
+                            <button class="seg-btn" data-diff="1">简单</button>
+                            <button class="seg-btn active" data-diff="2">中等</button>
+                            <button class="seg-btn" data-diff="3">困难</button>
+                            <div class="seg-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">棋子数</div>
+                        <div class="stone-info">
+                            <div class="stone-count">
+                                <span class="stone-dot black"></span>
+                                <span class="count-num" id="gomokuBlackCount">0</span>
+                            </div>
+                            <div class="stone-count">
+                                <span class="stone-dot white"></span>
+                                <span class="count-num" id="gomokuWhiteCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">落子记录</div>
+                        <div class="move-feed" id="gomokuMoveList">
+                            <div class="move-empty">暂无落子</div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="action-btn primary" id="gomokuRestartBtn">
+                            <span class="btn-text">重新开始</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                        <button class="action-btn secondary" id="gomokuUndoBtn">
+                            <span class="btn-text">悔棋</span>
+                            <span class="btn-arrow">↺</span>
+                        </button>
+                        <button class="action-btn danger" id="gomokuSurrenderBtn">
+                            <span class="btn-text">认输</span>
+                            <span class="btn-arrow">×</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Go Section -->
+        <section class="game-section hidden" id="goSection">
+            <div class="section-label">
+                <span class="label-num">C</span>
+                <span class="label-text">围棋</span>
+            </div>
+            <div class="game-layout">
+                <div class="board-container">
+                    <div class="board-frame">
+                        <div class="board-status" id="goStatus">
+                            <span class="status-dot"></span>
+                            <span class="status-text" id="goStatusText">黑棋落子</span>
+                        </div>
+                        <canvas id="goCanvas" width="560" height="560"></canvas>
+                    </div>
+                </div>
+                <div class="controls-panel">
+                    <div class="control-group">
+                        <div class="control-label">棋盘大小</div>
+                        <div class="seg-control go-size-control">
+                            <button class="seg-btn go-size-btn" data-size="7">7</button>
+                            <button class="seg-btn go-size-btn active" data-size="9">9</button>
+                            <button class="seg-btn go-size-btn" data-size="13">13</button>
+                            <div class="seg-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">AI 难度</div>
+                        <div class="seg-control go-diff-control">
+                            <button class="seg-btn go-diff-btn" data-diff="1">简单</button>
+                            <button class="seg-btn go-diff-btn active" data-diff="2">中等</button>
+                            <button class="seg-btn go-diff-btn" data-diff="3">困难</button>
+                            <div class="seg-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">提子数</div>
+                        <div class="stone-info">
+                            <div class="stone-count">
+                                <span class="stone-dot black"></span>
+                                <span class="count-label">黑</span>
+                                <span class="count-num" id="goBlackCaptures">0</span>
+                            </div>
+                            <div class="stone-count">
+                                <span class="stone-dot white"></span>
+                                <span class="count-label">白</span>
+                                <span class="count-num" id="goWhiteCaptures">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">目数</div>
+                        <div class="stone-info">
+                            <div class="stone-count">
+                                <span class="stone-dot black"></span>
+                                <span class="count-label">黑</span>
+                                <span class="count-num" id="goBlackTerritory">0</span>
+                            </div>
+                            <div class="stone-count">
+                                <span class="stone-dot white"></span>
+                                <span class="count-label">白</span>
+                                <span class="count-num" id="goWhiteTerritory">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">对局信息</div>
+                        <div class="info-row">
+                            <span class="info-key">手数</span>
+                            <span class="info-val" id="goMoveCount">0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">贴目</span>
+                            <span class="info-val">7.5目</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="action-btn secondary" id="goPassBtn">
+                            <span class="btn-text">停一手</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                        <button class="action-btn primary" id="goRestartBtn">
+                            <span class="btn-text">重新开始</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                        <button class="action-btn danger" id="goSurrenderBtn">
+                            <span class="btn-text">认输</span>
+                            <span class="btn-arrow">×</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modal -->
+        <div class="modal-overlay" id="gameOverModal">
+            <div class="modal">
+                <div class="modal-line"></div>
+                <div class="modal-content">
+                    <span class="modal-label">对局结果</span>
+                    <h2 class="modal-title" id="modalTitle">胜利</h2>
+                    <p class="modal-sub" id="modalSubtitle">你赢得了这局比赛</p>
+                    <button class="modal-btn" id="modalRestartBtn">
+                        <span>再来一局</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="gomoku.js"></script>
+    <script src="go.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
