@@ -109,7 +109,7 @@ body {
 }
 
 .brand-title {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.5px;
     line-height: 1.1;
@@ -174,7 +174,7 @@ body {
 }
 
 .nav-name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.5px;
     transition: var(--transition-fast);
@@ -222,11 +222,11 @@ body {
 }
 
 .label-text {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 12px;
     font-weight: 400;
     color: var(--fg-muted);
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 /* ==================== Scoreboard ==================== */
@@ -236,8 +236,8 @@ body {
 
 .scoreboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 16px;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    gap: 12px;
 }
 
 .score-card {
@@ -279,7 +279,7 @@ body {
 }
 
 .score-game-name {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.5px;
 }
@@ -359,6 +359,35 @@ body {
     z-index: 1;
 }
 
+/* ==================== Repetition Display ==================== */
+.repetition-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--grid-line);
+}
+
+.repetition-label {
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 11px;
+    color: var(--fg-light);
+    letter-spacing: 1px;
+}
+
+.repetition-value {
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    transition: var(--transition-spring);
+}
+
+.repetition-value.pop {
+    animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 .score-reset {
     display: flex;
     align-items: flex-end;
@@ -436,6 +465,9 @@ body {
     padding: 16px;
     position: relative;
     transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .board-frame:hover {
@@ -464,10 +496,10 @@ body {
 }
 
 .status-text {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
 }
 
 canvas {
@@ -495,11 +527,11 @@ canvas {
 }
 
 .control-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 12px;
     font-weight: 500;
     color: var(--fg-light);
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     margin-bottom: 10px;
 }
 
@@ -609,6 +641,49 @@ canvas {
     font-style: italic;
 }
 
+/* ==================== Chess Captured ==================== */
+.chess-captured {
+    min-height: 30px;
+}
+
+.captured-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.captured-side {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-light);
+    margin-right: 4px;
+}
+
+.captured-piece {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1.5px solid;
+}
+
+.captured-piece.red {
+    color: #cc0000;
+    border-color: #cc0000;
+    background: #fff5f5;
+}
+
+.captured-piece.black {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+    background: #f5f5f5;
+}
+
 /* Info Row */
 .info-row {
     display: flex;
@@ -617,15 +692,15 @@ canvas {
 }
 
 .info-key {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 12px;
     color: var(--fg-light);
     letter-spacing: 1px;
 }
 
 .info-val {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 13px;
     font-weight: 500;
 }
 
@@ -712,8 +787,8 @@ canvas {
 }
 
 .btn-text {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    font-size: 13px;
     font-weight: 500;
     letter-spacing: 1px;
     transition: var(--transition-fast);
@@ -798,7 +873,7 @@ canvas {
 }
 
 .modal-title {
-    font-size: 36px;
+    font-size: 38px;
     font-weight: 900;
     letter-spacing: -1px;
     margin: 8px 0 12px;
@@ -806,7 +881,7 @@ canvas {
 }
 
 .modal-sub {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--fg-muted);
     margin-bottom: 32px;
     line-height: 1.6;
@@ -879,6 +954,12 @@ canvas {
 }
 
 /* ==================== Responsive ==================== */
+@media (max-width: 900px) {
+    .scoreboard-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
 @media (max-width: 800px) {
     .app {
         padding: 0 16px 40px;
