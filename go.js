@@ -4,6 +4,7 @@ class GoAI {
         this.difficulty = difficulty;
         this.maxDepth = difficulty === 1 ? 1 : difficulty === 2 ? 2 : 3;
         this.boardSize = 9;
+        this.lastThinkingTime = 0;
     }
 
     setDifficulty(level) {
@@ -102,15 +103,29 @@ class GoAI {
         return captured;
     }
 
+    getValidMoves(board, player, previousBoard) {
+        const moves = [];
+        for (let r = 0; r < this.boardSize; r++) {
+            for (let c = 0; c < this.boardSize; c++) {
+                if (this.isValidMove(board, r, c, player, previousBoard)) {
+                    moves.push({ row: r, col: c });
+                }
+            }
+        }
+        return moves;
+    }
+
+    // 评估局面
     evaluateBoard(board, player) {
-        const opponent = player === 1 ? 2 : 1;
         let score = 0;
+        const opponent = player === 1 ? 2 : 1;
         for (let r = 0; r < this.boardSize; r++) {
             for (let c = 0; c < this.boardSize; c++) {
                 if (board[r][c] === player) score += 10;
                 else if (board[r][c] === opponent) score -= 10;
             }
         }
+        // 气数
         const visited = new Set();
         for (let r = 0; r < this.boardSize; r++) {
             for (let c = 0; c < this.boardSize; c++) {
@@ -128,26 +143,10 @@ class GoAI {
                 }
             }
         }
-        const corners = [[0, 0], [0, this.boardSize - 1], [this.boardSize - 1, 0], [this.boardSize - 1, this.boardSize - 1]];
-        for (const [cr, cc] of corners) {
-            if (board[cr][cc] === player) score += 20;
-            else if (board[cr][cc] === opponent) score -= 20;
-        }
         return score;
     }
 
-    getValidMoves(board, player, previousBoard) {
-        const moves = [];
-        for (let r = 0; r < this.boardSize; r++) {
-            for (let c = 0; c < this.boardSize; c++) {
-                if (this.isValidMove(board, r, c, player, previousBoard)) {
-                    moves.push({ row: r, col: c });
-                }
-            }
-        }
-        return moves;
-    }
-
+    // 评估单个落子
     evaluateMove(board, row, col, player) {
         const testBoard = board.map(r => [...r]);
         const captures = this.playStone(testBoard, row, col, player);
@@ -173,6 +172,7 @@ class GoAI {
         let validMoves = this.getValidMoves(board, player, previousBoard);
         if (validMoves.length === 0) return null;
 
+        // 评估每个落子
         const scoredMoves = validMoves.map(move => ({
             ...move,
             score: this.evaluateMove(board, move.row, move.col, player)
@@ -232,6 +232,105 @@ class GoAI {
             }
             return minEval;
         }
+    }
+
+    // 随机模拟对局
+    simulate(board, currentPlayer, aiPlayer) {
+        let simBoard = board.map(r => [...r]);
+        let player = currentPlayer;
+        let passes = 0;
+        let moves = 0;
+        const maxMoves = this.boardSize * this.boardSize * 2;
+
+        while (passes < 2 && moves < maxMoves) {
+            const moves_list = this.getValidMovesSimple(simBoard, player);
+            if (moves_list.length === 0) {
+                passes++;
+            } else {
+                // 优先选择靠近棋盘中心和已有棋子的位置
+                const move = this.selectPlayoutMove(simBoard, moves_list, player);
+                this.playStone(simBoard, move.row, move.col, player);
+                passes = 0;
+            }
+            player = player === 1 ? 2 : 1;
+            moves++;
+        }
+
+        // 计算结果
+        const score = this.evaluateFinalPosition(simBoard, aiPlayer);
+        if (score > 0) return 1;
+        if (score < 0) return -1;
+        return 0;
+    }
+
+    // 简化版合法走法（不做完整劫检测，加速模拟）
+    getValidMovesSimple(board, player) {
+        const moves = [];
+        for (let r = 0; r < this.boardSize; r++) {
+            for (let c = 0; c < this.boardSize; c++) {
+                if (board[r][c] === 0) {
+                    // 快速检查：无气且不能提子则跳过
+                    const testBoard = board.map(row => [...row]);
+                    testBoard[r][c] = player;
+                    const captures = this.countCaptures(testBoard, r, c, player);
+                    if (captures > 0) {
+                        moves.push({ row: r, col: c });
+                    } else {
+                        const group = this.getGroup(testBoard, r, c);
+                        if (group.liberties.size > 0) {
+                            moves.push({ row: r, col: c });
+                        }
+                    }
+                }
+            }
+        }
+        return moves;
+    }
+
+    // 选择模拟落子（有启发式）
+    selectPlayoutMove(board, moves, player) {
+        // 30% 概率选择最佳启发式走子
+        if (Math.random() < 0.3) {
+            let bestScore = -Infinity;
+            let bestMove = moves[0];
+            for (const move of moves) {
+                const testBoard = board.map(r => [...r]);
+                const caps = this.playStone(testBoard, move.row, move.col, player);
+                let score = caps.length * 10;
+                // 靠近中心加分
+                const center = (this.boardSize - 1) / 2;
+                score -= Math.abs(move.row - center) + Math.abs(move.col - center);
+                // 靠近已有棋子加分
+                for (const n of this.getNeighbors(move.row, move.col)) {
+                    if (board[n.row][n.col] !== 0) score += 2;
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = move;
+                }
+            }
+            return bestMove;
+        }
+        return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    // 终局评估
+    evaluateFinalPosition(board, aiPlayer) {
+        const territory = this.calculateTerritory(board);
+        let blackScore = 0, whiteScore = 0;
+        for (let r = 0; r < this.boardSize; r++) {
+            for (let c = 0; c < this.boardSize; c++) {
+                if (board[r][c] === 1) blackScore++;
+                else if (board[r][c] === 2) whiteScore++;
+                if (territory[r][c] === 1) blackScore++;
+                else if (territory[r][c] === 2) whiteScore++;
+            }
+        }
+        const komi = 3.75;
+        whiteScore += komi;
+
+        if (aiPlayer === 1) return blackScore - whiteScore;
+        return whiteScore - blackScore;
     }
 
     calculateTerritory(board) {
@@ -321,6 +420,11 @@ class GoGame {
         this.previousBoard = null;
         this.consecutivePasses = 0;
         this.hoverPos = null;
+        this._gameRecorded = false;
+        this.playerStartTime = 0;
+        const firstBtn = document.querySelector('.go-first-btn.active');
+        this.playerFirst = firstBtn ? parseInt(firstBtn.dataset.first) : 1;
+        this.playerIsBlack = this.playerFirst;
         this.updateStatus('黑棋落子');
         this.updateInfo();
     }
@@ -345,8 +449,15 @@ class GoGame {
         };
     }
 
+    isPlayerTurn() {
+        return this.playerIsBlack ? this.currentPlayer === 1 : this.currentPlayer === 2;
+    }
+
     handleClick(e) {
-        if (this.gameOver || this.currentPlayer !== 1) return;
+        if (this.gameOver || !this.isPlayerTurn()) return;
+        // 记录玩家思考时间
+        const thinkingTime = Date.now() - this.playerStartTime;
+        this.updatePlayerThinkingTime(thinkingTime);
         const pos = this.getMousePos(e);
         const col = Math.round((pos.x - this.padding) / this.cellSize);
         const row = Math.round((pos.y - this.padding) / this.cellSize);
@@ -355,7 +466,7 @@ class GoGame {
     }
 
     handleHover(e) {
-        if (this.gameOver || this.currentPlayer !== 1) return;
+        if (this.gameOver || !this.isPlayerTurn()) return;
         const pos = this.getMousePos(e);
         const col = Math.round((pos.x - this.padding) / this.cellSize);
         const row = Math.round((pos.y - this.padding) / this.cellSize);
@@ -379,22 +490,27 @@ class GoGame {
         }
         this.makeMove(row, col);
         if (!this.gameOver) {
-            this.currentPlayer = 2;
+            this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+            const aiPlayer = this.currentPlayer;
             this.updateStatus('AI 思考中...');
             this.canvas.style.cursor = 'wait';
             setTimeout(() => {
-                const move = this.ai.getBestMove(this.board, 2, this.previousBoard);
+                const startTime = Date.now();
+                const move = this.ai.getBestMove(this.board, aiPlayer, this.previousBoard);
+                this.ai.lastThinkingTime = Date.now() - startTime;
+                this.updateThinkingTime();
                 this.canvas.style.cursor = 'pointer';
                 if (move) {
                     this.makeMove(move.row, move.col);
                 } else {
                     this.consecutivePasses++;
-                    this.moveHistory.push({ pass: true, player: 2 });
+                    this.moveHistory.push({ pass: true, player: aiPlayer });
                     if (this.consecutivePasses >= 2) { this.endGame(); return; }
                 }
                 if (!this.gameOver) {
-                    this.currentPlayer = 1;
-                    this.updateStatus('黑棋落子');
+                    this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+                    if (this.isPlayerTurn()) this.playerStartTime = Date.now();
+                    this.updateStatus(this.currentPlayer === 1 ? '黑棋落子' : '白棋落子');
                 }
             }, 150);
         }
@@ -413,28 +529,32 @@ class GoGame {
     }
 
     pass() {
-        if (this.gameOver || this.currentPlayer !== 1) return;
+        if (this.gameOver || !this.isPlayerTurn()) return;
         this.consecutivePasses++;
-        this.moveHistory.push({ pass: true, player: 1 });
+        this.moveHistory.push({ pass: true, player: this.currentPlayer });
         this.previousBoard = this.board.map(r => [...r]);
         if (this.consecutivePasses >= 2) { this.endGame(); return; }
 
-        this.currentPlayer = 2;
+        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+        const aiPlayer = this.currentPlayer;
         this.updateStatus('AI 思考中...');
         this.canvas.style.cursor = 'wait';
         setTimeout(() => {
-            const move = this.ai.getBestMove(this.board, 2, this.previousBoard);
+            const startTime = Date.now();
+            const move = this.ai.getBestMove(this.board, aiPlayer, this.previousBoard);
+            this.ai.lastThinkingTime = Date.now() - startTime;
+            this.updateThinkingTime();
             this.canvas.style.cursor = 'pointer';
             if (move) {
                 this.makeMove(move.row, move.col);
             } else {
                 this.consecutivePasses++;
-                this.moveHistory.push({ pass: true, player: 2 });
+                this.moveHistory.push({ pass: true, player: aiPlayer });
             }
             if (this.consecutivePasses >= 2) { this.endGame(); return; }
             if (!this.gameOver) {
-                this.currentPlayer = 1;
-                this.updateStatus('黑棋落子');
+                this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+                this.updateStatus(this.currentPlayer === 1 ? '黑棋落子' : '白棋落子');
             }
         }, 150);
     }
@@ -457,9 +577,23 @@ class GoGame {
         if (result === 'player') window.appScoreboard.recordResult('go', 'win');
         else if (result === 'ai') window.appScoreboard.recordResult('go', 'lose');
         else window.appScoreboard.recordResult('go', 'draw');
+        this.recordMoves();
         this.drawTerritory();
         let title = result === 'player' ? '胜利' : result === 'ai' ? '失败' : '平局';
         this.showModal(title, subtitle);
+    }
+
+    // 记录完整最终棋面，供跨局重复度比较使用
+    recordMoves() {
+        if (this._gameRecorded) return;
+        const snapshot = { rows: this.boardSize, cols: this.boardSize, cells: this.board.flat() };
+        const history = window.appScoreboard.moveHistory['go'];
+        if (history && history.length > 0) {
+            const last = history[history.length - 1];
+            if (window.appScoreboard.snapshotKey(last) === window.appScoreboard.snapshotKey(snapshot)) return;
+        }
+        this._gameRecorded = true;
+        window.appScoreboard.recordGameMoves('go', snapshot);
     }
 
     showInvalidMove(row, col) {
@@ -602,6 +736,9 @@ class GoGame {
         if (this.moveHistory.length === 0) return;
         const last = this.moveHistory[this.moveHistory.length - 1];
         if (last.pass) return;
+        // 只标记AI的落子
+        const aiPlayer = this.playerIsBlack ? 1 : 2;
+        if (last.player !== aiPlayer) return;
         const x = this.padding + last.col * this.cellSize;
         const y = this.padding + last.row * this.cellSize;
         this.ctx.fillStyle = '#ff3300';
@@ -637,10 +774,42 @@ class GoGame {
         document.getElementById('goWhiteTerritory').textContent = score.whiteTerritory;
     }
 
+    updateThinkingTime() {
+        const el = document.getElementById('goThinkingTime');
+        if (el) el.textContent = `${this.ai.lastThinkingTime}ms`;
+    }
+
+    updatePlayerThinkingTime(time) {
+        const el = document.getElementById('goPlayerThinkingTime');
+        if (el) el.textContent = `${time}ms`;
+    }
+
     restart() {
         document.getElementById('gameOverModal').classList.remove('active');
+        this.recordMoves();
         this.init();
         this.draw();
+        // 围棋中黑棋先行，选择后手则 AI 执黑先行
+        if (this.playerFirst === 0) {
+            this.currentPlayer = 1;
+            this.updateStatus('AI 思考中...');
+            this.canvas.style.cursor = 'wait';
+            setTimeout(() => {
+                this.canvas.style.cursor = 'pointer';
+                const move = this.ai.getBestMove(this.board, 1, this.previousBoard);
+                if (move) {
+                    this.previousBoard = this.board.map(r => [...r]);
+                    const captured = this.ai.playStone(this.board, move.row, move.col, 1);
+                    this.captures.black += captured.length;
+                    this.moveHistory.push({ row: move.row, col: move.col, player: 1, captured: captured.length });
+                    this.updateInfo();
+                    this.draw();
+                    this.drawLastMove();
+                }
+                this.currentPlayer = 2;
+                this.updateStatus('白棋落子');
+            }, 150);
+        }
     }
 
     surrender() {

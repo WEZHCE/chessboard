@@ -4,6 +4,7 @@ class GomokuAI {
         this.difficulty = difficulty;
         this.boardSize = 15;
         this.maxDepth = difficulty === 1 ? 2 : difficulty === 2 ? 3 : 4;
+        this.lastThinkingTime = 0;
     }
 
     setDifficulty(level) {
@@ -218,6 +219,10 @@ class GomokuGame {
         this.currentPlayer = 1;
         this.gameOver = false;
         this.moveHistory = [];
+        this._gameRecorded = false;
+        this.playerStartTime = 0;
+        const firstBtn = document.querySelector('.gomoku-first-btn.active');
+        this.playerFirst = firstBtn ? parseInt(firstBtn.dataset.first) : 1;
         this.updateStatus('你的回合');
         this.updateMoveList();
         this.updateCounts();
@@ -245,6 +250,9 @@ class GomokuGame {
 
     handleClick(e) {
         if (this.gameOver || this.currentPlayer !== 1) return;
+        // 记录玩家思考时间
+        const thinkingTime = Date.now() - this.playerStartTime;
+        this.updatePlayerThinkingTime(thinkingTime);
         const pos = this.getMousePos(e);
         const col = Math.round((pos.x - this.padding) / this.cellSize);
         const row = Math.round((pos.y - this.padding) / this.cellSize);
@@ -259,12 +267,16 @@ class GomokuGame {
             this.updateStatus('AI 思考中...');
             this.canvas.style.cursor = 'wait';
             setTimeout(() => {
+                const startTime = Date.now();
                 const move = this.ai.getBestMove(this.board);
+                this.ai.lastThinkingTime = Date.now() - startTime;
+                this.updateThinkingTime();
                 this.canvas.style.cursor = 'pointer';
                 if (move) {
                     this.makeMove(move.row, move.col);
                     if (!this.gameOver) {
                         this.currentPlayer = 1;
+                        this.playerStartTime = Date.now();
                         this.updateStatus('你的回合');
                     }
                 }
@@ -324,8 +336,22 @@ class GomokuGame {
             subtitle = '双方不分胜负';
             window.appScoreboard.recordResult('gomoku', 'draw');
         }
+        this.recordMoves();
         this.updateStatus('对局结束');
         this.showModal(title, subtitle);
+    }
+
+    // 记录完整最终棋面，供跨局重复度比较使用
+    recordMoves() {
+        if (this._gameRecorded) return;
+        const snapshot = { rows: this.boardSize, cols: this.boardSize, cells: this.board.flat() };
+        const history = window.appScoreboard.moveHistory['gomoku'];
+        if (history && history.length > 0) {
+            const last = history[history.length - 1];
+            if (window.appScoreboard.snapshotKey(last) === window.appScoreboard.snapshotKey(snapshot)) return;
+        }
+        this._gameRecorded = true;
+        window.appScoreboard.recordGameMoves('gomoku', snapshot);
     }
 
     showModal(title, subtitle) {
@@ -457,6 +483,8 @@ class GomokuGame {
     drawLastMove() {
         if (this.moveHistory.length === 0) return;
         const last = this.moveHistory[this.moveHistory.length - 1];
+        // 只标记AI（白棋）的落子
+        if (last.player !== 2) return;
         const x = this.padding + last.col * this.cellSize;
         const y = this.padding + last.row * this.cellSize;
 
@@ -535,11 +563,44 @@ class GomokuGame {
         document.getElementById('gomokuWhiteCount').textContent = white;
     }
 
+    updateThinkingTime() {
+        const el = document.getElementById('gomokuThinkingTime');
+        if (el) el.textContent = `${this.ai.lastThinkingTime}ms`;
+    }
+
+    updatePlayerThinkingTime(time) {
+        const el = document.getElementById('gomokuPlayerThinkingTime');
+        if (el) el.textContent = `${time}ms`;
+    }
+
     restart() {
         document.getElementById('gameOverModal').classList.remove('active');
+        this.recordMoves();
         this.hoverPos = null;
         this.init();
         this.draw();
+        if (this.playerFirst === 0) {
+            this.currentPlayer = 2;
+            this.updateStatus('AI 思考中...');
+            this.canvas.style.cursor = 'wait';
+            setTimeout(() => {
+                const startTime = Date.now();
+                const move = this.ai.getBestMove(this.board);
+                this.ai.lastThinkingTime = Date.now() - startTime;
+                this.updateThinkingTime();
+                this.canvas.style.cursor = 'pointer';
+                if (move) this.makeMove(move.row, move.col);
+                if (!this.gameOver) {
+                    this.currentPlayer = 1;
+                    this.playerStartTime = Date.now();
+                    this.updateStatus('你的回合');
+                }
+            }, 120);
+        }
+        // 先手时也开始计时
+        if (this.playerFirst === 1) {
+            this.playerStartTime = Date.now();
+        }
     }
 
     undo() {
@@ -549,8 +610,8 @@ class GomokuGame {
             const last = this.moveHistory.pop();
             this.board[last.row][last.col] = 0;
         }
-        this.currentPlayer = 1;
-        this.updateStatus('你的回合');
+        this.currentPlayer = this.playerFirst === 1 ? 1 : 2;
+        this.updateStatus(this.currentPlayer === 1 ? '你的回合' : 'AI 思考中...');
         this.updateMoveList();
         this.updateCounts();
         this.draw();
